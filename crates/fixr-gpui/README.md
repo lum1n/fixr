@@ -30,9 +30,12 @@ fixr_gpui::init(cx, FixrConfig {
 `FixrConfig` fields: `endpoint`, `project_key`, `app_id`, `app_version`,
 `metadata`, `capture: CaptureStrategy` (`Auto` | `Disabled` |
 `Custom(Arc<dyn WindowCapturer>)`), `limits` (`fixr_client::Limits`, the
-wire-format defaults).
+wire-format defaults), `bind_open_shortcut` (default `true`).
 
-`init` binds these keys (`default_key_bindings()` returns them):
+`init` binds these keys (`default_key_bindings()` returns them). With
+`bind_open_shortcut: false` it leaves out the `OpenReport` key, for apps where
+that key is taken and the overlay opens from a menu or command palette instead
+(`key_bindings(false)` returns that set):
 
 | keys                                  | action                 | where             |
 |---------------------------------------|------------------------|-------------------|

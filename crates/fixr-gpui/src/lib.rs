@@ -81,6 +81,10 @@ pub struct FixrConfig {
     pub metadata: Option<MetadataProvider>,
     pub capture: CaptureStrategy,
     pub limits: Limits,
+    /// Bind `cmd-shift-f` / `ctrl-shift-f` to [`OpenReport`] (default true).
+    /// Turn off when the app already uses that key and opens the overlay
+    /// some other way (a menu, a command palette, [`open_report`]).
+    pub bind_open_shortcut: bool,
 }
 
 impl FixrConfig {
@@ -93,6 +97,7 @@ impl FixrConfig {
             metadata: None,
             capture: CaptureStrategy::Auto,
             limits: Limits::default(),
+            bind_open_shortcut: true,
         }
     }
 }
@@ -107,6 +112,7 @@ impl fmt::Debug for FixrConfig {
             .field("metadata", &self.metadata.as_ref().map(|_| "Fn"))
             .field("capture", &self.capture)
             .field("limits", &self.limits)
+            .field("bind_open_shortcut", &self.bind_open_shortcut)
             .finish()
     }
 }
@@ -121,7 +127,8 @@ impl Global for Fixr {}
 
 /// Starts the background sender (which also retries anything left in the
 /// queue from earlier runs), registers the actions and binds the default keys:
-/// `cmd-shift-f` on macOS, `ctrl-shift-f` elsewhere.
+/// `cmd-shift-f` on macOS, `ctrl-shift-f` elsewhere (unless
+/// [`FixrConfig::bind_open_shortcut`] is off), plus the overlay's own keys.
 pub fn init(cx: &mut App, config: FixrConfig) {
     let client = Client::new(ClientConfig::new(
         &config.endpoint,
@@ -130,12 +137,13 @@ pub fn init(cx: &mut App, config: FixrConfig) {
         SDK_VERSION,
     ));
     let sender = Arc::new(Sender::start(client, DiskQueue::default_for(&config.app_id)));
+    let bindings = key_bindings(config.bind_open_shortcut);
     cx.set_global(Fixr {
         config,
         sender,
         overlay: None,
     });
-    cx.bind_keys(default_key_bindings());
+    cx.bind_keys(bindings);
     cx.on_action(|_: &OpenReport, cx: &mut App| {
         // Without a window manager reporting focus (bare X servers) gpui knows no
         // active window; fall back to the first window that isn't our overlay.
@@ -158,13 +166,21 @@ pub fn init(cx: &mut App, config: FixrConfig) {
 
 /// The bindings [`init`] installs, for apps that rebuild their keymap.
 pub fn default_key_bindings() -> Vec<KeyBinding> {
+    key_bindings(true)
+}
+
+/// The overlay's bindings, with or without the global [`OpenReport`] key.
+pub fn key_bindings(open_shortcut: bool) -> Vec<KeyBinding> {
     let overlay = Some(OVERLAY_CONTEXT);
-    let mut bindings = vec![
-        KeyBinding::new(primary!("shift-f"), OpenReport, None),
+    let mut bindings = Vec::new();
+    if open_shortcut {
+        bindings.push(KeyBinding::new(primary!("shift-f"), OpenReport, None));
+    }
+    bindings.extend([
         KeyBinding::new("escape", CancelReport, overlay),
         KeyBinding::new(primary!("enter"), SendReport, overlay),
         KeyBinding::new(primary!("shift-r"), ToggleRedact, overlay),
-    ];
+    ]);
     bindings.extend(text_area::key_bindings());
     bindings
 }
@@ -210,5 +226,32 @@ pub fn open_report(window: &mut Window, cx: &mut App) {
                 cx.update(|cx| overlay::open(result, snapshot, parent, cx));
             })
             .detach(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn opens(bindings: &[KeyBinding]) -> usize {
+        bindings
+            .iter()
+            .filter(|b| b.action().as_any().is::<OpenReport>())
+            .count()
+    }
+
+    #[test]
+    fn open_shortcut_is_optional() {
+        let with = key_bindings(true);
+        let without = key_bindings(false);
+        assert_eq!(opens(&with), 1);
+        assert_eq!(opens(&without), 0);
+        assert_eq!(with.len(), without.len() + 1);
+        assert_eq!(opens(&default_key_bindings()), 1);
+    }
+
+    #[test]
+    fn config_binds_the_shortcut_by_default() {
+        assert!(FixrConfig::new("http://x", "k", "a").bind_open_shortcut);
     }
 }
