@@ -28,7 +28,7 @@ apps (Swift / web / gpui / CLI) ─POST /v1/reports─► Worker (Hono, D1, R2)
 | `crates/fixr-cli` | `fixr` command |
 | `crates/fixr-runner` | `fixr-runner` daemon driving acc on this machine |
 | `crates/fixr-gpui` | gpui integration: shortcut, window capture, overlay ([README](crates/fixr-gpui/README.md)) |
-| `clients/swift` | SwiftPM `Fixr` for iOS 17+ / macOS 14+ ([README](clients/swift/README.md)) |
+| `clients/swift` | SwiftPM `Fixr` for iOS 17+ / macOS 14+ ([README](clients/swift/README.md)); the root `Package.swift` re-exports it for git-URL dependencies |
 | `clients/web` | npm `@fixr/web` ([README](clients/web/README.md)) |
 | `deploy/` | systemd user unit and example runner config |
 

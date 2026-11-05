@@ -18,10 +18,22 @@ report goes to the fixr Worker as `POST /v1/reports`, following
 ## Install
 
 ```swift
-.package(path: "../fixr/clients/swift")   // or a git URL
+.package(path: "../fixr/clients/swift")   // or a git URL, see below
 // target:
 .product(name: "Fixr", package: "swift")
 ```
+
+By git URL, depend on the repository root, which has its own `Package.swift`
+exposing the same `Fixr` library (SwiftPM can't point a URL at a subdirectory).
+The package identity is then the repository name:
+
+```swift
+.package(url: "https://github.com/lum1n/fixr.git", branch: "main")
+// target:
+.product(name: "Fixr", package: "fixr")
+```
+
+The tests and the example stay in `clients/swift/Package.swift`.
 
 ## Use
 
