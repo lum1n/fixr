@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fixr",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+
+  // Placeholder ids: replace with the output of `wrangler d1 create fixr`.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fixr",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "SCREENSHOTS",
+      "bucket_name": "fixr-screenshots"
+    }
+  ],
+
+  // Return stale `claimed` jobs to `queued`.
+  "triggers": { "crons": ["*/5 * * * *"] }
+
+  // Secrets (wrangler secret put): RUNNER_TOKEN, HOOK_TOKEN
+}

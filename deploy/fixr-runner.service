@@ -1,0 +1,21 @@
+# systemd user unit for fixr-runner.
+#   cargo install --path crates/fixr-runner
+#   cp deploy/fixr-runner.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now fixr-runner
+#   loginctl enable-linger "$USER"   # keep running after logout
+[Unit]
+Description=fixr runner: turns in-app fix requests into agent PRs via acc
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.cargo/bin/fixr-runner --config %h/.config/fixr/runner.toml
+Restart=on-failure
+RestartSec=10
+Environment=RUST_LOG=fixr_runner=info
+# Agents are started detached by acc and survive runner restarts.
+KillMode=process
+
+[Install]
+WantedBy=default.target

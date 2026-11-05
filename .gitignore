@@ -1,0 +1,9 @@
+/target
+node_modules/
+dist/
+out/
+.wrangler/
+.build/
+.swiftpm/
+*.log
+.DS_Store

@@ -1,0 +1,50 @@
+[package]
+name = "fixr-gpui"
+description = "fixr for gpui apps: hotkey, own-window capture, redaction overlay, fire-and-forget upload"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = ["capture-macos", "capture-x11"]
+# CGWindowListCreateImage on our own window (macOS only, no Screen Recording prompt).
+capture-macos = ["dep:objc2", "dep:objc2-app-kit", "dep:objc2-core-graphics", "dep:objc2-core-foundation"]
+# x11rb GetImage on our own X11 window (Linux/BSD only).
+capture-x11 = ["dep:x11rb"]
+# xdg-desktop-portal Screenshot for Wayland; interactive, shows the desktop's dialog.
+capture-portal = ["dep:ashpd", "futures/executor"]
+# gpui's `Window::render_to_image` (gpui test-support; only implemented on macOS/Windows).
+capture-gpui-render = ["gpui/test-support"]
+
+[dependencies]
+fixr-client.workspace = true
+image.workspace = true
+# gpui drifts; pin the exact snapshot this crate was written against.
+gpui = { package = "gpui-pre", version = "=0.3.11", default-features = false }
+raw-window-handle = "0.6"
+futures = { version = "0.3", default-features = false, features = ["std"] }
+log = "0.4"
+unicode-segmentation = "1.10"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", optional = true }
+objc2-app-kit = { version = "0.3", optional = true, default-features = false, features = ["std", "NSResponder", "NSView", "NSWindow"] }
+objc2-core-foundation = { version = "0.3", optional = true, default-features = false, features = ["std", "CFCGTypes"] }
+objc2-core-graphics = { version = "0.3", optional = true, default-features = false, features = ["std", "CGBitmapContext", "CGColorSpace", "CGContext", "CGGeometry", "CGImage", "CGWindow"] }
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+x11rb = { version = "0.13", optional = true }
+ashpd = { version = "0.13", optional = true, default-features = false, features = ["async-io", "screenshot"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.11", features = ["font-kit", "x11", "wayland"] }
+
+[[example]]
+name = "demo"
+
+[lints]
+workspace = true

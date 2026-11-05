@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": "0b9f6c1e-3c1a-4d2b-9a57-5f3d2c1b0a99",
+  "created_at": "2026-11-05T14:03:12Z",
+  "prompt": "The Save button is misaligned with Cancel; make them the same height.",
+  "sdk": { "name": "fixr-test", "version": "0.1.0" },
+  "app": { "id": "com.example.notes", "version": "1.4.2", "build": "231" },
+  "device": {
+    "platform": "macos",
+    "os_version": "15.1",
+    "model": "Mac15,6",
+    "screen": { "width": 1512, "height": 982, "scale": 2 }
+  },
+  "locale": "en-US",
+  "context": {
+    "screen": "EditorViewController",
+    "title": "Untitled",
+    "url": "https://notes.example.com/doc/42"
+  },
+  "screenshot_omitted_reason": "user_removed",
+  "extra": { "branch": "main", "user_tier": "beta" }
+}

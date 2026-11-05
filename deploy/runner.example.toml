@@ -1,0 +1,10 @@
+# ~/.config/fixr/runner.toml
+worker_url = "https://fixr.example.workers.dev"
+runner_token = "<RUNNER_TOKEN secret on the Worker>"
+hook_token = "<HOOK_TOKEN secret on the Worker>"
+max_parallel = 2          # agents running at once
+poll_wait = 25            # long-poll seconds (Worker caps at 25)
+job_timeout_minutes = 120 # stop an agent that runs longer
+sandbox = "workspace"     # acc sandbox preset with gh/git credentials visible; "none" to run unconfined
+stop_when_done = true     # stop the agent after its turn; `acc` can still resume the session
+# template = "/home/me/.config/fixr/report.md"  # override crates/fixr-runner/templates/report.md

@@ -1,0 +1,20 @@
+[package]
+name = "fixr-cli"
+description = "fixr command line: send a prompt and a screenshot to the fixr Worker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "fixr"
+path = "src/main.rs"
+
+[dependencies]
+fixr-client.workspace = true
+clap = { version = "4", features = ["derive", "env"] }
+serde_json.workspace = true
+
+[lints]
+workspace = true

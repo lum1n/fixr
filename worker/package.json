@@ -1,0 +1,30 @@
+{
+  "name": "fixr-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "fixr ingress Worker: reports in, jobs out to the runner",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate:local": "wrangler d1 migrations apply fixr --local",
+    "migrate:remote": "wrangler d1 migrations apply fixr --remote",
+    "add-project": "node scripts/add-project.ts"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.13.16",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.5.1",
+    "@cloudflare/workers-types": "^5.20261104.1",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "~5.1.0",
+    "wrangler": "^4.157.0"
+  }
+}
