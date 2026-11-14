@@ -11,7 +11,10 @@ pub enum Outcome {
     /// 201, or 200 for a report the Worker already had.
     Delivered { duplicate: bool },
     /// 408, 429, 5xx or a network error. `retry_after` from the header.
-    RetryLater { reason: String, retry_after: Option<Duration> },
+    RetryLater {
+        reason: String,
+        retry_after: Option<Duration>,
+    },
     /// Any other 4xx: the report will never be accepted.
     Dropped { status: u16, reason: String },
 }
@@ -46,7 +49,12 @@ pub struct ClientConfig {
 }
 
 impl ClientConfig {
-    pub fn new(endpoint: impl Into<String>, project_key: impl Into<String>, sdk: &str, version: &str) -> Self {
+    pub fn new(
+        endpoint: impl Into<String>,
+        project_key: impl Into<String>,
+        sdk: &str,
+        version: &str,
+    ) -> Self {
         Self {
             endpoint: endpoint.into(),
             project_key: project_key.into(),
@@ -92,7 +100,10 @@ impl Client {
         let res = self
             .agent
             .post(&self.config.reports_url())
-            .header("Authorization", &format!("Bearer {}", self.config.project_key))
+            .header(
+                "Authorization",
+                &format!("Bearer {}", self.config.project_key),
+            )
             .header("Idempotency-Key", &report.id)
             .header("Content-Type", &b.content_type)
             .send(&b.bytes[..]);
@@ -122,13 +133,25 @@ mod tests {
 
     #[test]
     fn classifies_statuses() {
-        assert_eq!(classify(201, "", None), Outcome::Delivered { duplicate: false });
-        assert_eq!(classify(200, "", None), Outcome::Delivered { duplicate: true });
+        assert_eq!(
+            classify(201, "", None),
+            Outcome::Delivered { duplicate: false }
+        );
+        assert_eq!(
+            classify(200, "", None),
+            Outcome::Delivered { duplicate: true }
+        );
         for s in [408, 429, 500, 503] {
-            assert!(matches!(classify(s, "", None), Outcome::RetryLater { .. }), "{s}");
+            assert!(
+                matches!(classify(s, "", None), Outcome::RetryLater { .. }),
+                "{s}"
+            );
         }
         for s in [400, 401, 403, 404, 413, 422] {
-            assert!(matches!(classify(s, "", None), Outcome::Dropped { .. }), "{s}");
+            assert!(
+                matches!(classify(s, "", None), Outcome::Dropped { .. }),
+                "{s}"
+            );
         }
     }
 

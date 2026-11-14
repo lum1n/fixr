@@ -159,9 +159,12 @@ impl Report {
 
     /// Seconds since the Unix epoch of `created_at`, if it parses.
     pub fn created_unix(&self) -> Option<i64> {
-        time::OffsetDateTime::parse(&self.created_at, &time::format_description::well_known::Rfc3339)
-            .ok()
-            .map(|t| t.unix_timestamp())
+        time::OffsetDateTime::parse(
+            &self.created_at,
+            &time::format_description::well_known::Rfc3339,
+        )
+        .ok()
+        .map(|t| t.unix_timestamp())
     }
 }
 
@@ -176,7 +179,8 @@ pub fn now_rfc3339() -> String {
 
 /// `YYYY-MM-DDTHH:MM:SSZ` for a Unix timestamp.
 pub fn format_unix(secs: i64) -> String {
-    let t = time::OffsetDateTime::from_unix_timestamp(secs).unwrap_or(time::OffsetDateTime::UNIX_EPOCH);
+    let t =
+        time::OffsetDateTime::from_unix_timestamp(secs).unwrap_or(time::OffsetDateTime::UNIX_EPOCH);
     let f = time::macros::format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]Z");
     t.format(&f).unwrap_or_default()
 }
@@ -191,9 +195,20 @@ mod tests {
         assert_eq!(format_unix(1_793_890_688), "2026-11-05T14:58:08Z");
         let r = Report::new(
             "x",
-            Sdk { name: "t".into(), version: "0".into() },
-            App { id: "a".into(), ..App::default() },
-            Device { platform: Platform::Linux, os_version: None, model: None, screen: None },
+            Sdk {
+                name: "t".into(),
+                version: "0".into(),
+            },
+            App {
+                id: "a".into(),
+                ..App::default()
+            },
+            Device {
+                platform: Platform::Linux,
+                os_version: None,
+                model: None,
+                screen: None,
+            },
         );
         assert_eq!(r.created_at.len(), 20);
         assert!(r.created_unix().is_some());
@@ -205,9 +220,20 @@ mod tests {
     fn validates_limits() {
         let mut r = Report::new(
             " ",
-            Sdk { name: "t".into(), version: "0".into() },
-            App { id: "a".into(), ..App::default() },
-            Device { platform: Platform::Linux, os_version: None, model: None, screen: None },
+            Sdk {
+                name: "t".into(),
+                version: "0".into(),
+            },
+            App {
+                id: "a".into(),
+                ..App::default()
+            },
+            Device {
+                platform: Platform::Linux,
+                os_version: None,
+                model: None,
+                screen: None,
+            },
         );
         let l = Limits::default();
         assert_eq!(r.validate(&l), Err(Invalid::EmptyPrompt));

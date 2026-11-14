@@ -12,9 +12,15 @@
 mod gpui_render;
 #[cfg(all(target_os = "macos", feature = "capture-macos"))]
 mod macos;
-#[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "capture-portal"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "freebsd"),
+    feature = "capture-portal"
+))]
 mod portal;
-#[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "capture-x11"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "freebsd"),
+    feature = "capture-x11"
+))]
 mod x11;
 
 use std::fmt;
@@ -29,9 +35,15 @@ use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 pub use self::gpui_render::GpuiRenderCapturer;
 #[cfg(all(target_os = "macos", feature = "capture-macos"))]
 pub use self::macos::MacCapturer;
-#[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "capture-portal"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "freebsd"),
+    feature = "capture-portal"
+))]
 pub use self::portal::PortalCapturer;
-#[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "capture-x11"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "freebsd"),
+    feature = "capture-x11"
+))]
 pub use self::x11::X11Capturer;
 
 /// `screenshot_omitted_reason` tokens this crate sends.
@@ -155,11 +167,17 @@ fn auto(window: &mut Window, cx: &mut App) -> Capture {
             return MacCapturer.capture(window, cx);
         }
         WindowSystem::X11 => {
-            #[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "capture-x11"))]
+            #[cfg(all(
+                any(target_os = "linux", target_os = "freebsd"),
+                feature = "capture-x11"
+            ))]
             return X11Capturer.capture(window, cx);
         }
         WindowSystem::Wayland => {
-            #[cfg(all(any(target_os = "linux", target_os = "freebsd"), feature = "capture-portal"))]
+            #[cfg(all(
+                any(target_os = "linux", target_os = "freebsd"),
+                feature = "capture-portal"
+            ))]
             return PortalCapturer::default().capture(window, cx);
             return Capture::unsupported(reason::WAYLAND_UNSUPPORTED);
         }

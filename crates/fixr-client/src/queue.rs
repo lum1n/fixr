@@ -62,7 +62,13 @@ impl DiskQueue {
         let base = dirs::data_local_dir().unwrap_or_else(std::env::temp_dir);
         let safe: String = app_id
             .chars()
-            .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '-' { c } else { '_' })
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '.' || c == '-' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
         Self::new(base.join("fixr").join("queue").join(safe))
     }
@@ -73,7 +79,8 @@ impl DiskQueue {
 
     fn entry_dir(&self, id: &str) -> Option<PathBuf> {
         // Ids are UUIDs; refuse anything that could escape the directory.
-        (!id.is_empty() && id.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-')).then(|| self.dir.join(id))
+        (!id.is_empty() && id.bytes().all(|b| b.is_ascii_hexdigit() || b == b'-'))
+            .then(|| self.dir.join(id))
     }
 
     /// Stores a report, due immediately. Re-enqueueing the same id keeps its state.
@@ -87,7 +94,10 @@ impl DiskQueue {
         fs::create_dir_all(&dir)?;
         write_atomic(&dir.join("report.json"), &report.to_json())?;
         if let Some(img) = image {
-            write_atomic(&dir.join(format!("screenshot.{}", img.extension())), &img.bytes)?;
+            write_atomic(
+                &dir.join(format!("screenshot.{}", img.extension())),
+                &img.bytes,
+            )?;
         }
         let state = State {
             attempts: 0,
@@ -98,21 +108,32 @@ impl DiskQueue {
     }
 
     fn write_state(&self, dir: &Path, state: &State) -> io::Result<()> {
-        write_atomic(&dir.join("state.json"), &serde_json::to_vec(state).unwrap_or_default())
+        write_atomic(
+            &dir.join("state.json"),
+            &serde_json::to_vec(state).unwrap_or_default(),
+        )
     }
 
     pub fn get(&self, id: &str) -> Option<Entry> {
         let dir = self.entry_dir(id)?;
         let state: State = serde_json::from_slice(&fs::read(dir.join("state.json")).ok()?).ok()?;
-        let report: Report = serde_json::from_slice(&fs::read(dir.join("report.json")).ok()?).ok()?;
+        let report: Report =
+            serde_json::from_slice(&fs::read(dir.join("report.json")).ok()?).ok()?;
         let image = [("png", "image/png"), ("jpg", "image/jpeg")]
             .iter()
             .find_map(|(ext, mime)| {
                 fs::read(dir.join(format!("screenshot.{ext}")))
                     .ok()
-                    .map(|bytes| Image { mime: (*mime).into(), bytes })
+                    .map(|bytes| Image {
+                        mime: (*mime).into(),
+                        bytes,
+                    })
             });
-        Some(Entry { report, image, state })
+        Some(Entry {
+            report,
+            image,
+            state,
+        })
     }
 
     /// Every complete entry, oldest first.
@@ -129,7 +150,10 @@ impl DiskQueue {
     }
 
     pub fn due(&self, now: i64) -> Vec<Entry> {
-        self.all().into_iter().filter(|e| e.state.next_attempt_at <= now).collect()
+        self.all()
+            .into_iter()
+            .filter(|e| e.state.next_attempt_at <= now)
+            .collect()
     }
 
     /// When the next entry is due, if any.
@@ -145,7 +169,12 @@ impl DiskQueue {
     }
 
     /// Records a failed attempt; drops the entry when it ran out of attempts or time.
-    pub fn record_failure(&self, id: &str, now: i64, retry_after: Option<Duration>) -> io::Result<AfterFailure> {
+    pub fn record_failure(
+        &self,
+        id: &str,
+        now: i64,
+        retry_after: Option<Duration>,
+    ) -> io::Result<AfterFailure> {
         let Some(mut entry) = self.get(id) else {
             return Ok(AfterFailure::GaveUp);
         };
@@ -178,9 +207,20 @@ mod tests {
     fn report() -> Report {
         Report::new(
             "fix it",
-            Sdk { name: "t".into(), version: "0".into() },
-            App { id: "a".into(), ..App::default() },
-            Device { platform: Platform::Linux, os_version: None, model: None, screen: None },
+            Sdk {
+                name: "t".into(),
+                version: "0".into(),
+            },
+            App {
+                id: "a".into(),
+                ..App::default()
+            },
+            Device {
+                platform: Platform::Linux,
+                os_version: None,
+                model: None,
+                screen: None,
+            },
         )
     }
 
@@ -201,19 +241,26 @@ mod tests {
         let q = DiskQueue::new(tmp());
         let mut r = report();
         r.created_at = format_unix(1_000_000);
-        let img = Image { mime: "image/png".into(), bytes: vec![1, 2, 3] };
+        let img = Image {
+            mime: "image/png".into(),
+            bytes: vec![1, 2, 3],
+        };
         q.enqueue(&r, Some(&img), 1_000_000).unwrap();
         let due = q.due(1_000_000);
         assert_eq!(due.len(), 1);
         assert_eq!(due[0].image.as_ref().unwrap().bytes, vec![1, 2, 3]);
         assert_eq!(due[0].report, r);
 
-        assert_eq!(q.record_failure(&r.id, 1_000_000, None).unwrap(), AfterFailure::RetryAt(1_000_030));
+        assert_eq!(
+            q.record_failure(&r.id, 1_000_000, None).unwrap(),
+            AfterFailure::RetryAt(1_000_030)
+        );
         assert!(q.due(1_000_029).is_empty());
         assert_eq!(q.due(1_000_030).len(), 1);
         // Retry-After longer than the table wins.
         assert_eq!(
-            q.record_failure(&r.id, 1_000_030, Some(Duration::from_secs(500))).unwrap(),
+            q.record_failure(&r.id, 1_000_030, Some(Duration::from_secs(500)))
+                .unwrap(),
             AfterFailure::RetryAt(1_000_530)
         );
         q.remove(&r.id).unwrap();
@@ -228,17 +275,26 @@ mod tests {
         q.enqueue(&r, None, 0).unwrap();
         let mut now = 0;
         for _ in 0..MAX_ATTEMPTS - 1 {
-            assert!(matches!(q.record_failure(&r.id, now, None).unwrap(), AfterFailure::RetryAt(_)));
+            assert!(matches!(
+                q.record_failure(&r.id, now, None).unwrap(),
+                AfterFailure::RetryAt(_)
+            ));
             now += 1;
         }
-        assert_eq!(q.record_failure(&r.id, now, None).unwrap(), AfterFailure::GaveUp);
+        assert_eq!(
+            q.record_failure(&r.id, now, None).unwrap(),
+            AfterFailure::GaveUp
+        );
         assert!(q.get(&r.id).is_none());
 
         let r2 = report();
         let created = r2.created_unix().unwrap();
         q.enqueue(&r2, None, created).unwrap();
         let week = MAX_AGE.as_secs() as i64;
-        assert_eq!(q.record_failure(&r2.id, created + week, None).unwrap(), AfterFailure::GaveUp);
+        assert_eq!(
+            q.record_failure(&r2.id, created + week, None).unwrap(),
+            AfterFailure::GaveUp
+        );
     }
 
     #[test]

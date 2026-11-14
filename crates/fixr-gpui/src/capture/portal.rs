@@ -33,12 +33,16 @@ impl WindowCapturer for PortalCapturer {
     fn capture(&self, _window: &mut Window, _cx: &mut App) -> Capture {
         let (tx, rx) = oneshot::channel();
         let interactive = self.interactive;
-        let spawned = std::thread::Builder::new().name("fixr-portal".into()).spawn(move || {
-            let _ = tx.send(futures::executor::block_on(take(interactive)));
-        });
+        let spawned = std::thread::Builder::new()
+            .name("fixr-portal".into())
+            .spawn(move || {
+                let _ = tx.send(futures::executor::block_on(take(interactive)));
+            });
         match spawned {
             Ok(_) => Capture::Pending(rx),
-            Err(e) => Capture::Ready(Err(CaptureError::Failed(format!("spawn portal thread: {e}")))),
+            Err(e) => Capture::Ready(Err(CaptureError::Failed(format!(
+                "spawn portal thread: {e}"
+            )))),
         }
     }
 }
@@ -55,7 +59,8 @@ async fn take(interactive: bool) -> CaptureResult {
         .map_err(failed)?;
     let path = file_path(shot.uri().as_str())
         .ok_or_else(|| CaptureError::Failed(format!("unexpected screenshot URI {}", shot.uri())))?;
-    let img = image::open(&path).map_err(|e| CaptureError::Failed(format!("read {}: {e}", path.display())))?;
+    let img = image::open(&path)
+        .map_err(|e| CaptureError::Failed(format!("read {}: {e}", path.display())))?;
     // The portal leaves the file in ~/Pictures or similar; it's ours to clean up.
     let _ = std::fs::remove_file(&path);
     Ok(img.to_rgba8())

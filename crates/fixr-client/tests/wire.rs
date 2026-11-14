@@ -25,13 +25,24 @@ fn normalize(v: Value) -> Value {
 fn golden_report() -> Report {
     let mut r = Report::new(
         "The Save button is misaligned with Cancel; make them the same height.",
-        Sdk { name: "fixr-test".into(), version: "0.1.0".into() },
-        App { id: "com.example.notes".into(), version: Some("1.4.2".into()), build: Some("231".into()) },
+        Sdk {
+            name: "fixr-test".into(),
+            version: "0.1.0".into(),
+        },
+        App {
+            id: "com.example.notes".into(),
+            version: Some("1.4.2".into()),
+            build: Some("231".into()),
+        },
         Device {
             platform: Platform::Macos,
             os_version: Some("15.1".into()),
             model: Some("Mac15,6".into()),
-            screen: Some(Screen { width: 1512, height: 982, scale: 2.0 }),
+            screen: Some(Screen {
+                width: 1512,
+                height: 982,
+                scale: 2.0,
+            }),
         },
     );
     r.id = "0b9f6c1e-3c1a-4d2b-9a57-5f3d2c1b0a99".into();
@@ -75,12 +86,17 @@ fn omits_unknown_optionals() {
 
 #[test]
 fn multipart_has_report_then_screenshot() {
-    let img = Image { mime: "image/png".into(), bytes: b"\x89PNG fake".to_vec() };
+    let img = Image {
+        mime: "image/png".into(),
+        bytes: b"\x89PNG fake".to_vec(),
+    };
     let b = multipart(&golden_report(), Some(&img), "XYZ");
     assert_eq!(b.content_type, "multipart/form-data; boundary=XYZ");
     let s = String::from_utf8_lossy(&b.bytes);
     let report_at = s.find("name=\"report\"").unwrap();
-    let shot_at = s.find("name=\"screenshot\"; filename=\"screenshot.png\"").unwrap();
+    let shot_at = s
+        .find("name=\"screenshot\"; filename=\"screenshot.png\"")
+        .unwrap();
     assert!(report_at < shot_at);
     assert!(s.starts_with("--XYZ\r\n"));
     assert!(s.ends_with("--XYZ--\r\n"));
@@ -89,7 +105,10 @@ fn multipart_has_report_then_screenshot() {
 
 #[test]
 fn json_body_inlines_screenshot() {
-    let img = Image { mime: "image/jpeg".into(), bytes: vec![0xff, 0xd8, 0xff] };
+    let img = Image {
+        mime: "image/jpeg".into(),
+        bytes: vec![0xff, 0xd8, 0xff],
+    };
     let b = fixr_client::multipart::json(&golden_report(), Some(&img));
     let v: Value = serde_json::from_slice(&b.bytes).unwrap();
     assert_eq!(v["screenshot"]["mime"], "image/jpeg");
@@ -139,7 +158,13 @@ fn delivers_with_headers() {
         "HTTP/1.1 201 Created\r\nContent-Type: application/json\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}",
     ]);
     let r = golden_report();
-    let out = client(&url).send(&r, Some(&Image { mime: "image/png".into(), bytes: vec![1] }));
+    let out = client(&url).send(
+        &r,
+        Some(&Image {
+            mime: "image/png".into(),
+            bytes: vec![1],
+        }),
+    );
     assert_eq!(out, Outcome::Delivered { duplicate: false });
     let (head, body) = rx.recv().unwrap();
     let h = head.to_ascii_lowercase();
@@ -163,7 +188,16 @@ fn queue_retries_then_delivers() {
     let r = golden_report();
     q.enqueue(&r, None, 100).unwrap();
     let a = attempt(&c, &q, &r.id, 100);
-    assert!(matches!(a, Attempt::Queued { next_attempt_at: 145, .. }), "{a:?}");
+    assert!(
+        matches!(
+            a,
+            Attempt::Queued {
+                next_attempt_at: 145,
+                ..
+            }
+        ),
+        "{a:?}"
+    );
     assert_eq!(attempt(&c, &q, &r.id, 145), Attempt::Delivered);
     assert!(q.all().is_empty());
 }
@@ -177,7 +211,10 @@ fn permanent_failure_drops() {
     let q = DiskQueue::new(&dir);
     let r = golden_report();
     q.enqueue(&r, None, 0).unwrap();
-    assert!(matches!(attempt(&client(&url), &q, &r.id, 0), Attempt::Dropped { .. }));
+    assert!(matches!(
+        attempt(&client(&url), &q, &r.id, 0),
+        Attempt::Dropped { .. }
+    ));
     assert!(q.all().is_empty());
 }
 
@@ -186,5 +223,8 @@ fn network_error_is_retryable() {
     let l = TcpListener::bind("127.0.0.1:0").unwrap();
     let url = format!("http://{}", l.local_addr().unwrap());
     drop(l);
-    assert!(matches!(client(&url).send(&golden_report(), None), Outcome::RetryLater { .. }));
+    assert!(matches!(
+        client(&url).send(&golden_report(), None),
+        Outcome::RetryLater { .. }
+    ));
 }

@@ -14,8 +14,8 @@ use std::sync::Arc;
 
 use fixr_gpui::{Context as ReportContext, FixrConfig, Metadata};
 use gpui::{
-    App, Bounds, ClickEvent, Context, FocusHandle, Focusable, KeyBinding, Window, WindowBounds, WindowOptions, actions,
-    div, prelude::*, px, rgb, size,
+    App, Bounds, ClickEvent, Context, FocusHandle, Focusable, KeyBinding, Window, WindowBounds,
+    WindowOptions, actions, div, prelude::*, px, rgb, size,
 };
 
 actions!(demo, [Quit]);
@@ -80,17 +80,23 @@ impl Render for Demo {
                     // The bug: an extra top margin and odd padding.
                     .child(button("save", "Save").mt(px(13.)).px(px(23.))),
             )
-            .child(div().flex().child(
-                button("report", "Report a problem").on_click(|_: &ClickEvent, window, cx| {
-                    fixr_gpui::open_report(window, cx);
-                }),
-            ))
+            .child(
+                div()
+                    .flex()
+                    .child(button("report", "Report a problem").on_click(
+                        |_: &ClickEvent, window, cx| {
+                            fixr_gpui::open_report(window, cx);
+                        },
+                    )),
+            )
     }
 }
 
 fn main() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("fixr_gpui=info")).init();
-    let endpoint = std::env::var("FIXR_ENDPOINT").unwrap_or_else(|_| "http://localhost:8787".into());
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("fixr_gpui=info"))
+        .init();
+    let endpoint =
+        std::env::var("FIXR_ENDPOINT").unwrap_or_else(|_| "http://localhost:8787".into());
     let project_key = std::env::var("FIXR_PROJECT_KEY").unwrap_or_else(|_| "demo-key".into());
 
     gpui_platform::application().run(move |cx: &mut App| {
@@ -112,7 +118,11 @@ fn main() {
         );
         cx.on_action(|_: &Quit, cx| cx.quit());
         cx.bind_keys([KeyBinding::new(
-            if cfg!(target_os = "macos") { "cmd-q" } else { "ctrl-q" },
+            if cfg!(target_os = "macos") {
+                "cmd-q"
+            } else {
+                "ctrl-q"
+            },
             Quit,
             None,
         )]);

@@ -55,7 +55,10 @@ pub struct StatusUpdate {
 
 impl StatusUpdate {
     pub fn state(state: JobState) -> Self {
-        Self { state: Some(state), ..Self::default() }
+        Self {
+            state: Some(state),
+            ..Self::default()
+        }
     }
 
     pub fn detail(mut self, d: impl Into<String>) -> Self {
@@ -99,7 +102,10 @@ impl Api {
             Ok(resp)
         } else {
             let body = resp.text().await.unwrap_or_default();
-            Err(ApiError::Status(s.as_u16(), body.chars().take(300).collect()))
+            Err(ApiError::Status(
+                s.as_u16(),
+                body.chars().take(300).collect(),
+            ))
         }
     }
 

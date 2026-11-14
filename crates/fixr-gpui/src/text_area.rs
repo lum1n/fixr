@@ -6,10 +6,11 @@
 use std::ops::Range;
 
 use gpui::{
-    App, Bounds, ClipboardItem, ContentMask, Context, CursorStyle, ElementId, ElementInputHandler, Entity,
-    EntityInputHandler, FocusHandle, Focusable, GlobalElementId, KeyBinding, LayoutId, MouseButton, MouseDownEvent,
-    MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point, SharedString, Style, TextRun, UTF16Selection, Window,
-    WrappedLine, actions, div, fill, hsla, point, prelude::*, px, relative, rgba, size,
+    App, Bounds, ClipboardItem, ContentMask, Context, CursorStyle, ElementId, ElementInputHandler,
+    Entity, EntityInputHandler, FocusHandle, Focusable, GlobalElementId, KeyBinding, LayoutId,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad, Pixels, Point,
+    SharedString, Style, TextRun, UTF16Selection, Window, WrappedLine, actions, div, fill, hsla,
+    point, prelude::*, px, relative, rgba, size,
 };
 use unicode_segmentation::UnicodeSegmentation as _;
 
@@ -105,7 +106,12 @@ impl Layout {
         if pos.y < px(0.) {
             return 0;
         }
-        let p = self.paragraphs.iter().rev().find(|p| p.top <= pos.y).unwrap_or(first);
+        let p = self
+            .paragraphs
+            .iter()
+            .rev()
+            .find(|p| p.top <= pos.y)
+            .unwrap_or(first);
         let rows = p.line.size(self.line_height).height;
         let y = (pos.y - p.top).min(rows - px(1.)).max(px(0.));
         let local = match p
@@ -128,7 +134,10 @@ impl Layout {
             }
             let s = range.start.max(p.start) - p.start;
             let e = range.end.min(end) - p.start;
-            let (Some(a), Some(b)) = (p.line.position_for_index(s, lh), p.line.position_for_index(e, lh)) else {
+            let (Some(a), Some(b)) = (
+                p.line.position_for_index(s, lh),
+                p.line.position_for_index(e, lh),
+            ) else {
                 continue;
             };
             let (a, b) = (point(a.x, a.y + p.top), point(b.x, b.y + p.top));
@@ -140,7 +149,10 @@ impl Layout {
             }
             out.push(Bounds::from_corners(a, point(width, a.y + lh)));
             if b.y > a.y + lh {
-                out.push(Bounds::from_corners(point(px(0.), a.y + lh), point(width, b.y)));
+                out.push(Bounds::from_corners(
+                    point(px(0.), a.y + lh),
+                    point(width, b.y),
+                ));
             }
             out.push(Bounds::from_corners(
                 point(px(0.), b.y),
@@ -365,7 +377,12 @@ impl TextArea {
         }
     }
 
-    fn on_mouse_down(&mut self, event: &MouseDownEvent, window: &mut Window, cx: &mut Context<Self>) {
+    fn on_mouse_down(
+        &mut self,
+        event: &MouseDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.is_selecting = true;
         let index = self.index_for_mouse(event.position);
         if event.modifiers.shift {
@@ -379,7 +396,12 @@ impl TextArea {
         self.is_selecting = false;
     }
 
-    fn on_mouse_move(&mut self, event: &MouseMoveEvent, window: &mut Window, cx: &mut Context<Self>) {
+    fn on_mouse_move(
+        &mut self,
+        event: &MouseMoveEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         if self.is_selecting {
             self.select_to(self.index_for_mouse(event.position), window, cx);
         }
@@ -433,14 +455,24 @@ impl EntityInputHandler for TextArea {
         Some(self.content[range].to_owned())
     }
 
-    fn selected_text_range(&mut self, _: bool, _: &mut Window, _: &mut Context<Self>) -> Option<UTF16Selection> {
+    fn selected_text_range(
+        &mut self,
+        _: bool,
+        _: &mut Window,
+        _: &mut Context<Self>,
+    ) -> Option<UTF16Selection> {
         Some(UTF16Selection {
             range: self.range_to_utf16(&self.selected_range),
             reversed: self.selection_reversed,
         })
     }
 
-    fn set_selected_text_range(&mut self, range_utf16: Range<usize>, window: &mut Window, cx: &mut Context<Self>) {
+    fn set_selected_text_range(
+        &mut self,
+        range_utf16: Range<usize>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.selected_range = self.range_from_utf16(&range_utf16);
         self.selection_reversed = false;
         window.notify_text_selection_changed(&self.focus_handle);
@@ -496,12 +528,15 @@ impl EntityInputHandler for TextArea {
             .or(self.marked_range.clone())
             .unwrap_or(self.selected_range.clone());
         self.content.replace_range(range.clone(), new_text);
-        self.marked_range = (!new_text.is_empty()).then(|| range.start..range.start + new_text.len());
+        self.marked_range =
+            (!new_text.is_empty()).then(|| range.start..range.start + new_text.len());
         let start_utf16 = self.offset_to_utf16(range.start);
         let len_utf16 = new_text.encode_utf16().count();
         self.selected_range = new_selected_range_utf16
             .map(|sel| {
-                self.range_from_utf16(&(start_utf16 + sel.start.min(len_utf16)..start_utf16 + sel.end.min(len_utf16)))
+                self.range_from_utf16(
+                    &(start_utf16 + sel.start.min(len_utf16)..start_utf16 + sel.end.min(len_utf16)),
+                )
             })
             .unwrap_or_else(|| range.start + new_text.len()..range.start + new_text.len());
         self.selection_reversed = false;
@@ -658,7 +693,9 @@ impl Element for TextAreaElement {
         } else if cursor_pos.y + line_height > scroll_y + view_h {
             scroll_y = cursor_pos.y + line_height - view_h;
         }
-        scroll_y = scroll_y.min((layout.height - view_h).max(px(0.))).max(px(0.));
+        scroll_y = scroll_y
+            .min((layout.height - view_h).max(px(0.)))
+            .max(px(0.));
         let origin = point(bounds.left(), bounds.top() - scroll_y);
 
         let selection = layout
@@ -693,7 +730,11 @@ impl Element for TextAreaElement {
         cx: &mut App,
     ) {
         let focus_handle = self.input.read(cx).focus_handle.clone();
-        window.handle_input(&focus_handle, ElementInputHandler::new(bounds, self.input.clone()), cx);
+        window.handle_input(
+            &focus_handle,
+            ElementInputHandler::new(bounds, self.input.clone()),
+            cx,
+        );
         let Some(mut p) = prepainted.take() else {
             return;
         };
@@ -703,10 +744,14 @@ impl Element for TextAreaElement {
             }
             for para in &p.layout.paragraphs {
                 let origin = point(p.origin.x, p.origin.y + para.top);
-                if let Err(e) = para
-                    .line
-                    .paint(origin, p.layout.line_height, gpui::TextAlign::Left, None, window, cx)
-                {
+                if let Err(e) = para.line.paint(
+                    origin,
+                    p.layout.line_height,
+                    gpui::TextAlign::Left,
+                    None,
+                    window,
+                    cx,
+                ) {
                     log::warn!("fixr: text paint failed: {e:#}");
                 }
             }

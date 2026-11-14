@@ -15,7 +15,11 @@ const SDK: &str = "fixr-cli";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Parser, Debug)]
-#[command(name = "fixr", version, about = "Send a UI fix request with a screenshot to a coding agent")]
+#[command(
+    name = "fixr",
+    version,
+    about = "Send a UI fix request with a screenshot to a coding agent"
+)]
 #[command(args_conflicts_with_subcommands = true)]
 struct Cli {
     #[command(subcommand)]
@@ -31,13 +35,23 @@ struct Cli {
 #[derive(clap::Args, Debug)]
 struct Conn {
     /// Project key issued by `worker/scripts/add-project.ts`.
-    #[arg(long = "project", env = "FIXR_PROJECT_KEY", global = true, hide_env_values = true)]
+    #[arg(
+        long = "project",
+        env = "FIXR_PROJECT_KEY",
+        global = true,
+        hide_env_values = true
+    )]
     project_key: Option<String>,
     /// Worker base URL.
     #[arg(long, env = "FIXR_ENDPOINT", global = true)]
     endpoint: Option<String>,
     /// App id in the report; also names the retry queue.
-    #[arg(long = "app", env = "FIXR_APP_ID", default_value = "fixr-cli", global = true)]
+    #[arg(
+        long = "app",
+        env = "FIXR_APP_ID",
+        default_value = "fixr-cli",
+        global = true
+    )]
     app_id: String,
     /// Retry queue directory (default: platform data dir).
     #[arg(long, global = true)]
@@ -113,8 +127,14 @@ fn queue(conn: &Conn) -> DiskQueue {
 }
 
 fn client(conn: &Conn, json: bool) -> Result<Client, String> {
-    let endpoint = conn.endpoint.clone().ok_or("--endpoint or FIXR_ENDPOINT is required")?;
-    let key = conn.project_key.clone().ok_or("--project or FIXR_PROJECT_KEY is required")?;
+    let endpoint = conn
+        .endpoint
+        .clone()
+        .ok_or("--endpoint or FIXR_ENDPOINT is required")?;
+    let key = conn
+        .project_key
+        .clone()
+        .ok_or("--project or FIXR_PROJECT_KEY is required")?;
     let mut cfg = ClientConfig::new(endpoint, key, SDK, VERSION);
     if json {
         cfg.format = BodyFormat::Json;
@@ -138,19 +158,32 @@ fn run(cli: Cli) -> Result<u8, String> {
         return Ok(worst);
     }
 
-    let prompt = cli.prompt.ok_or("a prompt is required: fixr \"make the title bold\"")?;
+    let prompt = cli
+        .prompt
+        .ok_or("a prompt is required: fixr \"make the title bold\"")?;
     let a = cli.send;
     let limits = Limits::default();
 
     let mut report = Report::new(
         prompt,
-        Sdk { name: SDK.into(), version: VERSION.into() },
-        App { id: cli.conn.app_id.clone(), version: a.app_version.clone(), build: None },
+        Sdk {
+            name: SDK.into(),
+            version: VERSION.into(),
+        },
+        App {
+            id: cli.conn.app_id.clone(),
+            version: a.app_version.clone(),
+            build: None,
+        },
         metadata::host_device_info(),
     );
     report.locale = metadata::host_locale();
     if a.url.is_some() || a.screen.is_some() || a.title.is_some() {
-        report.context = Some(Context { screen: a.screen, title: a.title, url: a.url });
+        report.context = Some(Context {
+            screen: a.screen,
+            title: a.title,
+            url: a.url,
+        });
     }
     report.extra = a.meta.into_iter().collect();
 
@@ -172,15 +205,16 @@ fn run(cli: Cli) -> Result<u8, String> {
     report.validate(&limits).map_err(|e| e.to_string())?;
 
     if a.dry_run {
-        let format = if a.json { BodyFormat::Json } else { BodyFormat::Multipart };
+        let format = if a.json {
+            BodyFormat::Json
+        } else {
+            BodyFormat::Multipart
+        };
         let body = multipart::body(&report, image.as_ref(), format);
-        let url = cli
-            .conn
-            .endpoint
-            .as_deref()
-            .map_or_else(|| "<endpoint>/v1/reports".to_owned(), |e| {
-                ClientConfig::new(e, "", SDK, VERSION).reports_url()
-            });
+        let url = cli.conn.endpoint.as_deref().map_or_else(
+            || "<endpoint>/v1/reports".to_owned(),
+            |e| ClientConfig::new(e, "", SDK, VERSION).reports_url(),
+        );
         let mut out = std::io::stdout().lock();
         let _ = write!(
             out,
@@ -207,7 +241,10 @@ fn report_attempt(id: &str, a: &Attempt) -> u8 {
             println!("{id}");
             0
         }
-        Attempt::Queued { next_attempt_at, reason } => {
+        Attempt::Queued {
+            next_attempt_at,
+            reason,
+        } => {
             let wait = next_attempt_at - unix_now();
             eprintln!("fixr: {id} queued ({reason}); retry in {wait}s with `fixr flush`");
             2

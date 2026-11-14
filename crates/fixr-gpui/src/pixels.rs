@@ -18,7 +18,13 @@ pub enum ByteOrder {
 ///
 /// Returns `None` when the buffer is shorter than `stride * height` or the
 /// stride can't hold `width` pixels.
-pub fn xrgb32_to_rgba(data: &[u8], width: u32, height: u32, stride: usize, order: ByteOrder) -> Option<RgbaImage> {
+pub fn xrgb32_to_rgba(
+    data: &[u8],
+    width: u32,
+    height: u32,
+    stride: usize,
+    order: ByteOrder,
+) -> Option<RgbaImage> {
     let (w, h) = (width as usize, height as usize);
     if stride < w * 4 || data.len() < stride.checked_mul(h)? {
         return None;
