@@ -63,7 +63,10 @@ impl Config {
             c.max_parallel = 1;
         }
         if !matches!(c.sandbox.as_str(), "workspace" | "none") {
-            return Err(format!("sandbox must be \"workspace\" or \"none\", not {:?}", c.sandbox));
+            return Err(format!(
+                "sandbox must be \"workspace\" or \"none\", not {:?}",
+                c.sandbox
+            ));
         }
         Ok(c)
     }

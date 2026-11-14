@@ -17,14 +17,21 @@ pub fn unix_now() -> i64 {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Attempt {
     Delivered,
-    Queued { next_attempt_at: i64, reason: String },
-    Dropped { reason: String },
+    Queued {
+        next_attempt_at: i64,
+        reason: String,
+    },
+    Dropped {
+        reason: String,
+    },
 }
 
 /// Tries to deliver the queued report `id` once and updates the queue.
 pub fn attempt(client: &Client, queue: &DiskQueue, id: &str, now: i64) -> Attempt {
     let Some(entry) = queue.get(id) else {
-        return Attempt::Dropped { reason: "not in queue".into() };
+        return Attempt::Dropped {
+            reason: "not in queue".into(),
+        };
     };
     match client.send(&entry.report, entry.image.as_ref()) {
         Outcome::Delivered { .. } => {
@@ -35,8 +42,14 @@ pub fn attempt(client: &Client, queue: &DiskQueue, id: &str, now: i64) -> Attemp
             let _ = queue.remove(id);
             Attempt::Dropped { reason }
         }
-        Outcome::RetryLater { reason, retry_after } => match queue.record_failure(id, now, retry_after) {
-            Ok(AfterFailure::RetryAt(t)) => Attempt::Queued { next_attempt_at: t, reason },
+        Outcome::RetryLater {
+            reason,
+            retry_after,
+        } => match queue.record_failure(id, now, retry_after) {
+            Ok(AfterFailure::RetryAt(t)) => Attempt::Queued {
+                next_attempt_at: t,
+                reason,
+            },
             Ok(AfterFailure::GaveUp) => Attempt::Dropped {
                 reason: format!("gave up: {reason}"),
             },

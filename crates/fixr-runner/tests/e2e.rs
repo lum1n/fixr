@@ -14,7 +14,12 @@ use wiremock::matchers::{method, path_regex};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 fn git(dir: &std::path::Path, args: &[&str]) {
-    let ok = Command::new("git").current_dir(dir).args(args).status().unwrap().success();
+    let ok = Command::new("git")
+        .current_dir(dir)
+        .args(args)
+        .status()
+        .unwrap()
+        .success();
     assert!(ok, "git {args:?}");
 }
 
@@ -26,7 +31,18 @@ async fn claude_edits_a_worktree_and_reports_done() {
     git(&repo, &["init", "-q", "-b", "main"]);
     std::fs::write(repo.join("README.md"), "# demo\n").unwrap();
     git(&repo, &["add", "."]);
-    git(&repo, &["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"]);
+    git(
+        &repo,
+        &[
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "commit",
+            "-qm",
+            "init",
+        ],
+    );
 
     let template = root.join("template.md");
     std::fs::write(
@@ -70,7 +86,10 @@ async fn claude_edits_a_worktree_and_reports_done() {
         .map(|r| serde_json::from_slice(&r.body).unwrap())
         .collect();
     println!("status updates: {bodies:#?}");
-    let session = bodies[0]["session_id"].as_str().expect("running with session id").to_owned();
+    let session = bodies[0]["session_id"]
+        .as_str()
+        .expect("running with session id")
+        .to_owned();
     assert_eq!(bodies[0]["state"], "running");
     assert_eq!(bodies.last().unwrap()["state"], "done", "{bodies:?}");
 
@@ -79,10 +98,17 @@ async fn claude_edits_a_worktree_and_reports_done() {
     let wt = home.join(".acc/w").join(&session);
     let readme = std::fs::read_to_string(wt.join("README.md")).unwrap();
     assert!(readme.contains("hello from fixr"), "{readme}");
-    let log = Command::new("git").current_dir(&wt).args(["log", "--oneline", "-1"]).output().unwrap();
+    let log = Command::new("git")
+        .current_dir(&wt)
+        .args(["log", "--oneline", "-1"])
+        .output()
+        .unwrap();
     println!("worktree head: {}", String::from_utf8_lossy(&log.stdout));
 
     // Clean up the worktree and branch.
-    git(&repo, &["worktree", "remove", "--force", wt.to_str().unwrap()]);
+    git(
+        &repo,
+        &["worktree", "remove", "--force", wt.to_str().unwrap()],
+    );
     let _ = std::fs::remove_dir_all(&root);
 }

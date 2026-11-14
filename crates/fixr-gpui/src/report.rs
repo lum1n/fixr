@@ -30,7 +30,11 @@ pub(crate) struct Snapshot {
 
 impl Snapshot {
     /// The host's device info plus the window's display in points.
-    pub fn gather(window_title: Option<String>, screen: Option<Screen>, metadata: Metadata) -> Self {
+    pub fn gather(
+        window_title: Option<String>,
+        screen: Option<Screen>,
+        metadata: Metadata,
+    ) -> Self {
         let mut device = fixr_client::metadata::host_device_info();
         device.screen = screen;
         Self {
@@ -123,7 +127,10 @@ mod tests {
         assert_eq!(r.app.build, None);
         assert_eq!(r.device.screen.unwrap().width, 1920);
         assert_eq!(r.locale.as_deref(), Some("en-US"));
-        assert_eq!(r.context.as_ref().and_then(|c| c.title.as_deref()), Some("Demo"));
+        assert_eq!(
+            r.context.as_ref().and_then(|c| c.title.as_deref()),
+            Some("Demo")
+        );
         assert_eq!(r.screenshot_omitted_reason, None);
         assert!(r.validate(&Limits::default()).is_ok());
 
@@ -150,7 +157,10 @@ mod tests {
         assert_eq!(ctx.screen.as_deref(), Some("SettingsView"));
         assert_eq!(ctx.title.as_deref(), Some("Settings"));
         assert_eq!(r.extra["branch"], "main");
-        assert_eq!(r.screenshot_omitted_reason.as_deref(), Some("wayland_unsupported"));
+        assert_eq!(
+            r.screenshot_omitted_reason.as_deref(),
+            Some("wayland_unsupported")
+        );
     }
 
     #[test]

@@ -16,7 +16,8 @@ use tracing::{error, info, warn};
 async fn main() -> std::process::ExitCode {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "fixr_runner=info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "fixr_runner=info".into()),
         )
         .init();
 
@@ -29,7 +30,10 @@ async fn main() -> std::process::ExitCode {
                 None => return usage("--config needs a path"),
             },
             "-h" | "--help" => {
-                println!("usage: fixr-runner [--config PATH]   (default {})", Config::default_path().display());
+                println!(
+                    "usage: fixr-runner [--config PATH]   (default {})",
+                    Config::default_path().display()
+                );
                 return std::process::ExitCode::SUCCESS;
             }
             other => return usage(&format!("unknown argument {other:?}")),
@@ -52,7 +56,9 @@ async fn main() -> std::process::ExitCode {
         let mut backoff = Duration::from_secs(1);
         loop {
             // Only claim a job when there is room to run it.
-            let Ok(permit) = slots.clone().acquire_owned().await else { return };
+            let Ok(permit) = slots.clone().acquire_owned().await else {
+                return;
+            };
             match api.next(cfg.poll_wait).await {
                 Ok(Some(next)) => {
                     backoff = Duration::from_secs(1);

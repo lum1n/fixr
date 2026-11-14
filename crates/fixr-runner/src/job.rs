@@ -37,7 +37,9 @@ pub fn verdict(events: &[HostEvent]) -> Verdict {
     for e in events {
         v = match e.state {
             HostState::Done => return Verdict::Done,
-            HostState::Error => return Verdict::Failed(e.detail.clone().unwrap_or_else(|| "agent error".into())),
+            HostState::Error => {
+                return Verdict::Failed(e.detail.clone().unwrap_or_else(|| "agent error".into()));
+            }
             HostState::Exited => {
                 return Verdict::Failed(match e.code {
                     Some(c) => format!("agent exited with code {c} before finishing"),
@@ -73,7 +75,9 @@ fn harness(name: &str) -> Result<Harness, String> {
     // Codex and ACP harnesses need the log followed until the session is up
     // before the first prompt goes in; not done yet.
     if !matches!(h, Harness::Claude | Harness::Pi) {
-        return Err(format!("harness {name:?} isn't supported by fixr-runner yet (claude, pi)"));
+        return Err(format!(
+            "harness {name:?} isn't supported by fixr-runner yet (claude, pi)"
+        ));
     }
     Ok(h)
 }
@@ -89,24 +93,37 @@ pub async fn run(host: &Host, api: &Api, cfg: &Config, next: Next) {
     let id = next.job.id.clone();
     if let Err(msg) = drive(host, api, cfg, next).await {
         warn!(job = %id, "failed: {msg}");
-        if let Err(e) = api.status(&id, &StatusUpdate::state(JobState::Error).detail(msg)).await {
+        if let Err(e) = api
+            .status(&id, &StatusUpdate::state(JobState::Error).detail(msg))
+            .await
+        {
             warn!(job = %id, "couldn't report the error: {e}");
         }
     }
 }
 
 async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), String> {
-    let Next { job, project, screenshot_url } = next;
+    let Next {
+        job,
+        project,
+        screenshot_url,
+    } = next;
     let harness = harness(&project.harness)?;
 
     let mut attachments = Vec::new();
     if let Some(url) = &screenshot_url {
-        let bytes = api.screenshot(url).await.map_err(|e| format!("screenshot: {e}"))?;
+        let bytes = api
+            .screenshot(url)
+            .await
+            .map_err(|e| format!("screenshot: {e}"))?;
         image::load_from_memory(&bytes).map_err(|e| format!("screenshot doesn't decode: {e}"))?;
         if bytes.len() > Attachment::MAX_BYTES {
             return Err("screenshot over acc's 5 MiB attachment limit".into());
         }
-        let mime = job.screenshot_mime.clone().unwrap_or_else(|| "image/png".into());
+        let mime = job
+            .screenshot_mime
+            .clone()
+            .unwrap_or_else(|| "image/png".into());
         attachments.push(Attachment::from_bytes(mime, &bytes));
     }
 
@@ -115,9 +132,13 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
 
     // Start from the remote's base branch when there is one, so PRs aren't
     // based on a stale local checkout.
-    let base = sh(host, &base_script(&project.repo_path, &project.base_branch), b"")
-        .await
-        .map_err(|e| format!("{}: {e}", project.repo_path))?;
+    let base = sh(
+        host,
+        &base_script(&project.repo_path, &project.base_branch),
+        b"",
+    )
+    .await
+    .map_err(|e| format!("{}: {e}", project.repo_path))?;
     let base = base.trim();
     let cwd = sh(
         host,
@@ -155,7 +176,12 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
         harness: Some(harness),
         cwd: cwd.clone(),
         model: project.model.clone(),
-        permission: Some(project.permission.clone().unwrap_or_else(|| DEFAULT_PERMISSION.into())),
+        permission: Some(
+            project
+                .permission
+                .clone()
+                .unwrap_or_else(|| DEFAULT_PERMISSION.into()),
+        ),
         title: Some(prompt::title(&job.report)),
         prompt: Some(text),
         attachments,
@@ -169,7 +195,8 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
         }),
         ..LaunchRequest::default()
     };
-    let (mut session, launch) = Session::launch(req, &session_id, "fixr", now_ms()).map_err(|e| e.to_string())?;
+    let (mut session, launch) =
+        Session::launch(req, &session_id, "fixr", now_ms()).map_err(|e| e.to_string())?;
 
     // Before launching, so the Worker can map webhook events to the job.
     api.status(
@@ -184,15 +211,23 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
     .await
     .map_err(|e| format!("status: {e}"))?;
 
-    let pid = sh(host, &launch.script, &launch.stdin).await.map_err(|e| format!("launch: {e}"))?;
+    let pid = sh(host, &launch.script, &launch.stdin)
+        .await
+        .map_err(|e| format!("launch: {e}"))?;
     for u in session.on_launched(&pid) {
         info!(job = %job.id, "{:?}", u.event);
     }
     let transmit = session.take_transmit();
     let input = session.input_exec(transmit);
-    sh(host, &input.script, &input.stdin).await.map_err(|e| format!("prompt: {e}"))?;
-    let watch = session.watch_exec(Some(&Hook::Webhook { url: cfg.hook_url() }));
-    sh(host, &watch.script, &watch.stdin).await.map_err(|e| format!("watch: {e}"))?;
+    sh(host, &input.script, &input.stdin)
+        .await
+        .map_err(|e| format!("prompt: {e}"))?;
+    let watch = session.watch_exec(Some(&Hook::Webhook {
+        url: cfg.hook_url(),
+    }));
+    sh(host, &watch.script, &watch.stdin)
+        .await
+        .map_err(|e| format!("watch: {e}"))?;
     info!(job = %job.id, session = %session_id, %cwd, "agent started");
 
     let deadline = Instant::now() + Duration::from_secs(cfg.job_timeout_minutes * 60);
@@ -202,7 +237,10 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
     let outcome = loop {
         tokio::time::sleep(POLL).await;
         if Instant::now() > deadline {
-            break Verdict::Failed(format!("timed out after {} minutes", cfg.job_timeout_minutes));
+            break Verdict::Failed(format!(
+                "timed out after {} minutes",
+                cfg.job_timeout_minutes
+            ));
         }
         let e = session.events_exec(offset);
         let text = match sh(host, &e.script, &e.stdin).await {
@@ -220,7 +258,12 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
             Verdict::Running => {}
             Verdict::Blocked(d) => {
                 if reported_block.as_ref() != Some(&d) {
-                    let _ = api.status(&job.id, &StatusUpdate::state(JobState::Blocked).detail(d.clone())).await;
+                    let _ = api
+                        .status(
+                            &job.id,
+                            &StatusUpdate::state(JobState::Blocked).detail(d.clone()),
+                        )
+                        .await;
                     reported_block = Some(d);
                 }
             }
@@ -230,15 +273,22 @@ async fn drive(host: &Host, api: &Api, cfg: &Config, next: Next) -> Result<(), S
 
     let result = match outcome {
         Verdict::Done => {
-            let pr = sh(host, &pr_script(&cwd, &branch), b"").await.unwrap_or_default();
+            let pr = sh(host, &pr_script(&cwd, &branch), b"")
+                .await
+                .unwrap_or_default();
             let pr = pr.trim();
             let update = if pr.starts_with("http") {
                 info!(job = %job.id, "PR {pr}");
-                StatusUpdate { pr_url: Some(pr.to_owned()), ..StatusUpdate::state(JobState::Done) }
+                StatusUpdate {
+                    pr_url: Some(pr.to_owned()),
+                    ..StatusUpdate::state(JobState::Done)
+                }
             } else {
                 StatusUpdate::state(JobState::Done).detail(format!("no PR found for {branch}"))
             };
-            api.status(&job.id, &update).await.map_err(|e| format!("status: {e}"))
+            api.status(&job.id, &update)
+                .await
+                .map_err(|e| format!("status: {e}"))
         }
         Verdict::Failed(msg) => Err(msg),
         Verdict::Running | Verdict::Blocked(_) => Ok(()),
@@ -287,8 +337,13 @@ mod tests {
     #[test]
     fn verdicts() {
         assert_eq!(verdict(&[]), Verdict::Running);
-        let blocked = ev(r#"{"at":1,"session":"s","state":"blocked","kind":"permission","detail":"Bash","offset":1}"#);
-        assert_eq!(verdict(std::slice::from_ref(&blocked)), Verdict::Blocked("permission: Bash".into()));
+        let blocked = ev(
+            r#"{"at":1,"session":"s","state":"blocked","kind":"permission","detail":"Bash","offset":1}"#,
+        );
+        assert_eq!(
+            verdict(std::slice::from_ref(&blocked)),
+            Verdict::Blocked("permission: Bash".into())
+        );
         let done = ev(r#"{"at":2,"session":"s","state":"done","offset":2}"#);
         assert_eq!(verdict(&[blocked.clone(), done.clone()]), Verdict::Done);
         let exited = ev(r#"{"at":3,"session":"s","state":"exited","code":1,"offset":3}"#);
@@ -298,7 +353,8 @@ mod tests {
             verdict(&[exited]),
             Verdict::Failed("agent exited with code 1 before finishing".into())
         );
-        let err = ev(r#"{"at":4,"session":"s","state":"error","detail":"rate limited","offset":4}"#);
+        let err =
+            ev(r#"{"at":4,"session":"s","state":"error","detail":"rate limited","offset":4}"#);
         assert_eq!(verdict(&[err]), Verdict::Failed("rate limited".into()));
     }
 
@@ -312,7 +368,10 @@ mod tests {
     #[test]
     fn scripts_quote_paths() {
         let s = base_script("~/repos/my app", "main");
-        assert!(s.starts_with("cd \"$HOME\"/'my app'") || s.starts_with("cd \"$HOME\"/'repos/my app'"), "{s}");
+        assert!(
+            s.starts_with("cd \"$HOME\"/'my app'") || s.starts_with("cd \"$HOME\"/'repos/my app'"),
+            "{s}"
+        );
         assert!(s.contains("origin/main"));
         let p = pr_script("/tmp/x y", "acc/claude-1");
         assert!(p.contains("'/tmp/x y'"));

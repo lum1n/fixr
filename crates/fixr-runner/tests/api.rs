@@ -31,7 +31,10 @@ async fn next_parses_a_job_and_204_is_none() {
 
     let api = Api::new(&server.uri(), "rt");
     let next = api.next(1).await.unwrap().unwrap();
-    assert_eq!(next.job.report.prompt, "The Save button is misaligned with Cancel; make them the same height.");
+    assert_eq!(
+        next.job.report.prompt,
+        "The Save button is misaligned with Cancel; make them the same height."
+    );
     assert_eq!(next.project.harness, "claude");
     assert!(next.project.model.is_none());
     assert!(api.next(1).await.unwrap().is_none());
@@ -42,8 +45,13 @@ async fn status_posts_only_set_fields() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/v1/runner/jobs/J/status"))
-        .and(body_json(serde_json::json!({ "state": "running", "session_id": "claude-abc" })))
-        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({"id": "J", "state": "running"})))
+        .and(body_json(
+            serde_json::json!({ "state": "running", "session_id": "claude-abc" }),
+        ))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_json(serde_json::json!({"id": "J", "state": "running"})),
+        )
         .expect(1)
         .mount(&server)
         .await;
@@ -64,6 +72,9 @@ async fn errors_carry_status() {
         .mount(&server)
         .await;
     let api = Api::new(&server.uri(), "rt");
-    let err = api.status("nope", &StatusUpdate::state(JobState::Done)).await.unwrap_err();
+    let err = api
+        .status("nope", &StatusUpdate::state(JobState::Done))
+        .await
+        .unwrap_err();
     assert!(err.to_string().contains("404"), "{err}");
 }

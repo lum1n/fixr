@@ -24,9 +24,15 @@ impl WindowCapturer for X11Capturer {
             Ok(RawWindowHandle::Xcb(h)) => h.window.get(),
             Ok(RawWindowHandle::Xlib(h)) => match u32::try_from(h.window) {
                 Ok(id) => id,
-                Err(_) => return Capture::Ready(Err(CaptureError::Failed("Xlib window id out of range".into()))),
+                Err(_) => {
+                    return Capture::Ready(Err(CaptureError::Failed(
+                        "Xlib window id out of range".into(),
+                    )));
+                }
             },
-            Ok(RawWindowHandle::Wayland(_)) => return Capture::unsupported(reason::WAYLAND_UNSUPPORTED),
+            Ok(RawWindowHandle::Wayland(_)) => {
+                return Capture::unsupported(reason::WAYLAND_UNSUPPORTED);
+            }
             _ => return Capture::unsupported(reason::UNSUPPORTED),
         };
         Capture::Ready(capture_window(id))
@@ -39,7 +45,8 @@ fn failed(what: &str, e: impl std::fmt::Display) -> CaptureError {
 
 /// Grabs the current contents of X11 window `id` as RGBA.
 pub fn capture_window(id: u32) -> CaptureResult {
-    let (conn, _screen) = RustConnection::connect(None).map_err(|e| failed("connect to X server", e))?;
+    let (conn, _screen) =
+        RustConnection::connect(None).map_err(|e| failed("connect to X server", e))?;
     let geom = conn
         .get_geometry(id)
         .map_err(|e| failed("GetGeometry", e))?

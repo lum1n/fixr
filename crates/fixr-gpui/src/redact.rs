@@ -40,7 +40,11 @@ impl Redaction {
     /// `preview_size`, rounding outwards so nothing at the edge leaks, and
     /// clamping to the image. Returns `(x, y, w, h)` in image pixels, or `None`
     /// if nothing is left after clamping.
-    pub fn to_image_pixels(&self, preview_size: (f32, f32), image_size: (u32, u32)) -> Option<(u32, u32, u32, u32)> {
+    pub fn to_image_pixels(
+        &self,
+        preview_size: (f32, f32),
+        image_size: (u32, u32),
+    ) -> Option<(u32, u32, u32, u32)> {
         let (pw, ph) = preview_size;
         if pw <= 0.0 || ph <= 0.0 {
             return None;
@@ -95,14 +99,20 @@ mod tests {
     fn preview_rect_is_scaled_to_image_pixels() {
         // 1280×800 image previewed at 320×200: factor 4.
         let r = Redaction::from_corners((20.0, 30.0), (10.0, 10.0));
-        assert_eq!(r.to_image_pixels((320.0, 200.0), (1280, 800)), Some((40, 40, 40, 80)));
+        assert_eq!(
+            r.to_image_pixels((320.0, 200.0), (1280, 800)),
+            Some((40, 40, 40, 80))
+        );
     }
 
     #[test]
     fn fractional_edges_round_outwards_and_clamp() {
         let r = Redaction::from_corners((-5.0, 0.3), (10.2, 500.0));
         // factor 2 on both axes; x0 clamps to 0, y0 floors to 0, x1 = ceil(20.4) = 21, y1 clamps to 400.
-        assert_eq!(r.to_image_pixels((300.0, 200.0), (600, 400)), Some((0, 0, 21, 400)));
+        assert_eq!(
+            r.to_image_pixels((300.0, 200.0), (600, 400)),
+            Some((0, 0, 21, 400))
+        );
         let outside = Redaction::from_corners((400.0, 0.0), (500.0, 10.0));
         assert_eq!(outside.to_image_pixels((300.0, 200.0), (600, 400)), None);
     }
@@ -147,7 +157,10 @@ mod tests {
 
     #[test]
     fn preview_fits_box_and_keeps_aspect() {
-        assert_eq!(fit_preview((2560, 1600), (608.0, 300.0), 2.0), (480.0, 300.0));
+        assert_eq!(
+            fit_preview((2560, 1600), (608.0, 300.0), 2.0),
+            (480.0, 300.0)
+        );
         // A tiny capture is not blown up beyond its natural size.
         assert_eq!(fit_preview((200, 100), (608.0, 300.0), 2.0), (100.0, 50.0));
     }

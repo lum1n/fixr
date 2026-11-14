@@ -84,7 +84,11 @@ pub struct FixrConfig {
 }
 
 impl FixrConfig {
-    pub fn new(endpoint: impl Into<String>, project_key: impl Into<String>, app_id: impl Into<String>) -> Self {
+    pub fn new(
+        endpoint: impl Into<String>,
+        project_key: impl Into<String>,
+        app_id: impl Into<String>,
+    ) -> Self {
         Self {
             endpoint: endpoint.into(),
             project_key: project_key.into(),
@@ -129,7 +133,10 @@ pub fn init(cx: &mut App, config: FixrConfig) {
         SDK_NAME,
         SDK_VERSION,
     ));
-    let sender = Arc::new(Sender::start(client, DiskQueue::default_for(&config.app_id)));
+    let sender = Arc::new(Sender::start(
+        client,
+        DiskQueue::default_for(&config.app_id),
+    ));
     cx.set_global(Fixr {
         config,
         sender,

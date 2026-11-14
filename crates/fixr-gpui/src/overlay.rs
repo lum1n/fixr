@@ -6,9 +6,10 @@ use std::sync::Arc;
 use fixr_client::image::{PrepareError, prepare_rgba};
 use fixr_client::{Image, Limits, Report};
 use gpui::{
-    App, Bounds, ClickEvent, Context, CursorStyle, DisplayId, Entity, FocusHandle, Focusable, MouseButton,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, RenderImage, SharedString, Stateful, TitlebarOptions,
-    Window, WindowBounds, WindowKind, WindowOptions, canvas, div, img, prelude::*, px, rgb, size,
+    App, Bounds, ClickEvent, Context, CursorStyle, DisplayId, Entity, FocusHandle, Focusable,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, RenderImage,
+    SharedString, Stateful, TitlebarOptions, Window, WindowBounds, WindowKind, WindowOptions,
+    canvas, div, img, prelude::*, px, rgb, size,
 };
 use image::RgbaImage;
 
@@ -93,7 +94,12 @@ pub(crate) struct Overlay {
 }
 
 /// Opens the overlay window with the capture result. Called after capture.
-pub(crate) fn open(result: Result<RgbaImage, CaptureError>, snapshot: Snapshot, parent: Parent, cx: &mut App) {
+pub(crate) fn open(
+    result: Result<RgbaImage, CaptureError>,
+    snapshot: Snapshot,
+    parent: Parent,
+    cx: &mut App,
+) {
     let (shot, omitted) = match result {
         Ok(pixels) => (Some(Shot::new(pixels, parent.scale)), None),
         Err(e) => {
@@ -101,7 +107,11 @@ pub(crate) fn open(result: Result<RgbaImage, CaptureError>, snapshot: Snapshot, 
             (None, Some(e.omitted_reason()))
         }
     };
-    let bounds = Bounds::centered(parent.display, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
+    let bounds = Bounds::centered(
+        parent.display,
+        size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)),
+        cx,
+    );
     let options = WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(bounds)),
         titlebar: Some(TitlebarOptions {
@@ -117,7 +127,12 @@ pub(crate) fn open(result: Result<RgbaImage, CaptureError>, snapshot: Snapshot, 
         ..Default::default()
     };
     let opened = cx.open_window(options, |window, cx| {
-        let input = cx.new(|cx| TextArea::new("What should change? e.g. \"The Save button is misaligned\"", cx));
+        let input = cx.new(|cx| {
+            TextArea::new(
+                "What should change? e.g. \"The Save button is misaligned\"",
+                cx,
+            )
+        });
         window.focus(&input.focus_handle(cx), cx);
         cx.new(|cx| Overlay {
             focus: cx.focus_handle(),
@@ -212,7 +227,8 @@ impl Overlay {
             return;
         }
         if n > limits.max_prompt_chars {
-            self.error = Some(format!("Too long: {n} of {} characters.", limits.max_prompt_chars).into());
+            self.error =
+                Some(format!("Too long: {n} of {} characters.", limits.max_prompt_chars).into());
             cx.notify();
             return;
         }
@@ -230,16 +246,18 @@ impl Overlay {
         let sender = state.sender.clone();
 
         // Fire and forget: resize/encode and enqueue off the UI thread.
-        let spawned = std::thread::Builder::new().name("fixr-submit".into()).spawn(move || {
-            let (report, image) = finish(report, image, &redactions, &limits);
-            if let Err(e) = report.validate(&limits) {
-                log::warn!("fixr: report dropped, invalid: {e}");
-                return;
-            }
-            if let Err(e) = sender.submit(&report, image.as_ref()) {
-                log::warn!("fixr: can't queue report {}: {e}", report.id);
-            }
-        });
+        let spawned = std::thread::Builder::new()
+            .name("fixr-submit".into())
+            .spawn(move || {
+                let (report, image) = finish(report, image, &redactions, &limits);
+                if let Err(e) = report.validate(&limits) {
+                    log::warn!("fixr: report dropped, invalid: {e}");
+                    return;
+                }
+                if let Err(e) = sender.submit(&report, image.as_ref()) {
+                    log::warn!("fixr: can't queue report {}: {e}", report.id);
+                }
+            });
         if let Err(e) = spawned {
             log::warn!("fixr: can't start submit thread: {e}");
         }
@@ -261,7 +279,9 @@ impl Overlay {
             let why = self.omitted.unwrap_or(reason::CAPTURE_FAILED);
             return div()
                 .text_color(rgb(0xbbbbbb))
-                .child(format!("No screenshot ({why}). The report will be sent without one."))
+                .child(format!(
+                    "No screenshot ({why}). The report will be sent without one."
+                ))
                 .into_any_element();
         };
         if !self.include_shot {
@@ -287,7 +307,9 @@ impl Overlay {
             .children(dragging)
             .child(
                 canvas(
-                    move |bounds, _, cx| view.update(cx, |this, _| this.preview_origin = Some(bounds.origin)),
+                    move |bounds, _, cx| {
+                        view.update(cx, |this, _| this.preview_origin = Some(bounds.origin))
+                    },
                     |_, _, _, _| {},
                 )
                 .absolute()
@@ -412,7 +434,11 @@ impl Render for Overlay {
                 div()
                     .flex()
                     .justify_between()
-                    .child(div().font_weight(gpui::FontWeight::SEMIBOLD).child("Report a problem"))
+                    .child(
+                        div()
+                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .child("Report a problem"),
+                    )
                     .child(div().text_color(rgb(0x6b7280)).child(hint)),
             )
             .child(
@@ -435,12 +461,18 @@ impl Render for Overlay {
                         row.child(
                             button(
                                 "redact",
-                                if self.redact_mode { "Redact: on" } else { "Redact: off" },
+                                if self.redact_mode {
+                                    "Redact: on"
+                                } else {
+                                    "Redact: off"
+                                },
                                 false,
                             )
-                            .on_click(cx.listener(|this, _: &ClickEvent, window, cx| {
-                                this.toggle_redact(&ToggleRedact, window, cx)
-                            })),
+                            .on_click(cx.listener(
+                                |this, _: &ClickEvent, window, cx| {
+                                    this.toggle_redact(&ToggleRedact, window, cx)
+                                },
+                            )),
                         )
                         .when(!self.redactions.is_empty(), |row| {
                             row.child(button("undo", "Undo box", false).on_click(cx.listener(
@@ -462,11 +494,13 @@ impl Render for Overlay {
                                 },
                                 false,
                             )
-                            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                                this.include_shot = !this.include_shot;
-                                this.drag = None;
-                                cx.notify();
-                            })),
+                            .on_click(cx.listener(
+                                |this, _: &ClickEvent, _, cx| {
+                                    this.include_shot = !this.include_shot;
+                                    this.drag = None;
+                                    cx.notify();
+                                },
+                            )),
                         )
                     }),
             )
@@ -478,7 +512,11 @@ impl Render for Overlay {
                     .rounded_md()
                     .bg(rgb(0xffffff))
                     .border_1()
-                    .border_color(if input_focused { rgb(0x2563eb) } else { rgb(0xd1d5db) })
+                    .border_color(if input_focused {
+                        rgb(0x2563eb)
+                    } else {
+                        rgb(0xd1d5db)
+                    })
                     .overflow_hidden()
                     .child(self.input.clone()),
             )
@@ -492,12 +530,16 @@ impl Render for Overlay {
                         div()
                             .flex()
                             .gap_2()
-                            .child(button("cancel", "Cancel", false).on_click(
-                                cx.listener(|this, _: &ClickEvent, window, cx| this.cancel(&CancelReport, window, cx)),
-                            ))
-                            .child(button("send", "Send", true).on_click(
-                                cx.listener(|this, _: &ClickEvent, window, cx| this.send(&SendReport, window, cx)),
-                            )),
+                            .child(button("cancel", "Cancel", false).on_click(cx.listener(
+                                |this, _: &ClickEvent, window, cx| {
+                                    this.cancel(&CancelReport, window, cx)
+                                },
+                            )))
+                            .child(button("send", "Send", true).on_click(cx.listener(
+                                |this, _: &ClickEvent, window, cx| {
+                                    this.send(&SendReport, window, cx)
+                                },
+                            ))),
                     ),
             )
     }
@@ -536,7 +578,12 @@ mod tests {
         let pixels = RgbaImage::from_pixel(400, 200, Rgba([255, 255, 255, 255]));
         // Preview at 200×100 (half size); box (10,10)-(50,30) → pixels (20,20)-(100,60).
         let r = Redaction::from_corners((10.0, 10.0), (50.0, 30.0));
-        let (report, img) = finish(report(), Some((pixels, (200.0, 100.0))), &[r], &Limits::default());
+        let (report, img) = finish(
+            report(),
+            Some((pixels, (200.0, 100.0))),
+            &[r],
+            &Limits::default(),
+        );
         assert_eq!(report.screenshot_omitted_reason, None);
         let img = img.unwrap();
         assert_eq!(img.mime, "image/png");
@@ -563,7 +610,10 @@ mod tests {
         };
         let (report, img) = finish(report(), Some((noise, (300.0, 300.0))), &[], &limits);
         assert!(img.is_none());
-        assert_eq!(report.screenshot_omitted_reason.as_deref(), Some("too_large"));
+        assert_eq!(
+            report.screenshot_omitted_reason.as_deref(),
+            Some("too_large")
+        );
     }
 
     #[test]
@@ -572,6 +622,9 @@ mod tests {
         r.screenshot_omitted_reason = Some("wayland_unsupported".into());
         let (r, img) = finish(r, None, &[], &Limits::default());
         assert!(img.is_none());
-        assert_eq!(r.screenshot_omitted_reason.as_deref(), Some("wayland_unsupported"));
+        assert_eq!(
+            r.screenshot_omitted_reason.as_deref(),
+            Some("wayland_unsupported")
+        );
     }
 }

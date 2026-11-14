@@ -17,8 +17,8 @@ use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 #[allow(deprecated)]
 use objc2_core_graphics::CGWindowListCreateImage;
 use objc2_core_graphics::{
-    CGBitmapContextCreate, CGBitmapInfo, CGColorSpace, CGContext, CGImage, CGImageAlphaInfo, CGRectNull,
-    CGWindowImageOption, CGWindowListOption,
+    CGBitmapContextCreate, CGBitmapInfo, CGColorSpace, CGContext, CGImage, CGImageAlphaInfo,
+    CGRectNull, CGWindowImageOption, CGWindowListOption,
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
@@ -47,7 +47,9 @@ impl WindowCapturer for MacCapturer {
         };
         let number = ns_window.windowNumber();
         let Ok(number) = u32::try_from(number) else {
-            return Capture::Ready(Err(CaptureError::Failed(format!("bad window number {number}"))));
+            return Capture::Ready(Err(CaptureError::Failed(format!(
+                "bad window number {number}"
+            ))));
         };
         Capture::Ready(capture_window_number(number))
     }
@@ -96,13 +98,18 @@ pub fn capture_window_number(number: u32) -> CaptureResult {
         )
     }
     .ok_or_else(|| failed("CGBitmapContextCreate failed"))?;
-    let rect = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(width as f64, height as f64));
+    let rect = CGRect::new(
+        CGPoint::new(0.0, 0.0),
+        CGSize::new(width as f64, height as f64),
+    );
     CGContext::draw_image(Some(&context), rect, Some(&image));
     drop(context);
 
     // A window that is off screen or minimised comes back fully transparent.
     if pixels.as_chunks::<4>().0.iter().all(|p| p[3] == 0) {
-        return Err(failed("captured image is transparent (window not on screen?)"));
+        return Err(failed(
+            "captured image is transparent (window not on screen?)",
+        ));
     }
     unpremultiply(&mut pixels);
     let (w, h) = (

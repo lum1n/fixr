@@ -22,7 +22,11 @@ pub struct Image {
 
 impl Image {
     pub fn extension(&self) -> &'static str {
-        if self.mime == "image/jpeg" { "jpg" } else { "png" }
+        if self.mime == "image/jpeg" {
+            "jpg"
+        } else {
+            "png"
+        }
     }
 
     pub fn from_file_bytes(bytes: Vec<u8>) -> Option<Self> {
@@ -31,7 +35,10 @@ impl Image {
             image::ImageFormat::Jpeg => "image/jpeg",
             _ => return None,
         };
-        Some(Self { mime: mime.into(), bytes })
+        Some(Self {
+            mime: mime.into(),
+            bytes,
+        })
     }
 }
 
@@ -67,13 +74,19 @@ pub fn prepare(img: DynamicImage, limits: &Limits) -> Result<Image, PrepareError
     loop {
         let png = encode_png(&img)?;
         if png.len() <= limits.max_image_bytes {
-            return Ok(Image { mime: "image/png".into(), bytes: png });
+            return Ok(Image {
+                mime: "image/png".into(),
+                bytes: png,
+            });
         }
         let rgb = DynamicImage::ImageRgb8(img.to_rgb8());
         for q in JPEG_QUALITIES {
             let jpg = encode_jpeg(&rgb, q)?;
             if jpg.len() <= limits.max_image_bytes {
-                return Ok(Image { mime: "image/jpeg".into(), bytes: jpg });
+                return Ok(Image {
+                    mime: "image/jpeg".into(),
+                    bytes: jpg,
+                });
             }
         }
         let long = img.width().max(img.height());
@@ -154,7 +167,10 @@ mod tests {
 
     #[test]
     fn noisy_image_falls_back_to_jpeg_within_budget() {
-        let limits = Limits { max_image_bytes: 200_000, ..Limits::default() };
+        let limits = Limits {
+            max_image_bytes: 200_000,
+            ..Limits::default()
+        };
         let out = prepare_rgba(noise(800, 600), &limits).unwrap();
         assert_eq!(out.mime, "image/jpeg");
         assert!(out.bytes.len() <= 200_000);
@@ -162,13 +178,20 @@ mod tests {
 
     #[test]
     fn impossible_budget_is_too_large() {
-        let limits = Limits { max_image_bytes: 100, ..Limits::default() };
-        assert!(matches!(prepare_rgba(noise(400, 400), &limits), Err(PrepareError::TooLarge)));
+        let limits = Limits {
+            max_image_bytes: 100,
+            ..Limits::default()
+        };
+        assert!(matches!(
+            prepare_rgba(noise(400, 400), &limits),
+            Err(PrepareError::TooLarge)
+        ));
     }
 
     #[test]
     fn small_png_file_passes_through() {
-        let img = DynamicImage::ImageRgba8(RgbaImage::from_pixel(10, 10, image::Rgba([1, 2, 3, 255])));
+        let img =
+            DynamicImage::ImageRgba8(RgbaImage::from_pixel(10, 10, image::Rgba([1, 2, 3, 255])));
         let png = encode_png(&img).unwrap();
         let out = prepare_bytes(&png, &Limits::default()).unwrap();
         assert_eq!(out.bytes, png);

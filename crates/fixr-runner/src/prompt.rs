@@ -97,7 +97,13 @@ mod tests {
         let r = golden();
         let out = render(
             DEFAULT_TEMPLATE,
-            &Vars { report: &r, job_id: "J1", branch: "acc/claude-x", base_branch: "main", has_screenshot: true },
+            &Vars {
+                report: &r,
+                job_id: "J1",
+                branch: "acc/claude-x",
+                base_branch: "main",
+                has_screenshot: true,
+            },
         );
         assert!(!out.contains("{{"), "{out}");
         assert!(out.contains("The Save button is misaligned"));
@@ -116,7 +122,13 @@ mod tests {
         let r = golden();
         let out = render(
             "{{screenshot_note}}",
-            &Vars { report: &r, job_id: "J", branch: "b", base_branch: "m", has_screenshot: false },
+            &Vars {
+                report: &r,
+                job_id: "J",
+                branch: "b",
+                base_branch: "m",
+                has_screenshot: false,
+            },
         );
         assert_eq!(out, "No screenshot came with the report (user_removed).");
     }
